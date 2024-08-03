@@ -8,7 +8,8 @@ class SegmentationService():
     # self.__convert_to_gray()
     self.__convert_to_hsv()
     self.__thresold_segmentation()
-    self.__closing()
+    self.__dilation(iterations = 2)
+    self.__erode(iterations = 1)
     self.__print_image(window_name="Filtro de Canny para detección de bordes")
 
   def __convert_to_gray(self): 
@@ -31,6 +32,16 @@ class SegmentationService():
     # Aplicar la máscara a la imagen original
     red_segmented = cv2.bitwise_and(self.image, self.image, mask=mask)
     self.image = cv2.cvtColor(red_segmented, cv2.COLOR_BGR2RGB)
+
+  def __erode(self, iterations):
+    kernel_size = 5 
+    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    self.image = cv2.erode(self.image, kernel, iterations = iterations)
+  
+  def __dilation(self, iterations):
+    kernel_size = 5 
+    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    self.image = cv2.dilate(self.image, kernel, iterations = iterations)
 
   def __opening(self): 
     # Definir el kernel para la erosión
@@ -64,7 +75,7 @@ class SegmentationService():
     self.image = cv2.Canny(self.image, umbral_thresold_initial, umbral_thresold_end, apertureSize = kernel_size,
       L2gradient=True)
 
-  def __print_image(self, window_name='Image', width=1500, height=600):
+  def __print_image(self, window_name='Image', width=1000, height=600):
     resized_image = cv2.resize(self.image, (width, height))
     cv2.imshow(window_name, resized_image)
     cv2.resizeWindow(window_name, width, height)
