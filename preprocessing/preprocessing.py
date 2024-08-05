@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+from tkinter import simpledialog
+import tkinter as tk
 
 class PreprocessingService:
   def __init__(self):
@@ -7,7 +9,9 @@ class PreprocessingService:
     self.display_image = None 
     self.warped_image = None
     self.points = []
+    self.axis_points = []
     self.window_width = 1500
+    self.axis_values = {'minX': None, 'maxX': None, 'minY': None, 'maxY': None}
     self.window_height = 900
 
   def start_process(self, image_path):
@@ -15,6 +19,8 @@ class PreprocessingService:
     if self.image is not None:
         self.__clip_image()
         self.__crop_image()
+        self.__select_axis_points()
+        # self.__gaussian_blur()
 
   def __open_image(self, image_path):
     self.image = cv2.imread(image_path)
@@ -55,6 +61,64 @@ class PreprocessingService:
       cv2.imshow("Image", resized_image)
       print(f"Point selected: ({x_new}, {y_new})")
 
+
+  def __select_axis_points(self):
+    self.axis_image = self.warped_image.copy()
+    cv2.imshow("Select Axis Points", self.axis_image)
+    cv2.setMouseCallback("Select Axis Points", self.__click_axis_points)
+
+    
+    print("Please click on 4 points on the image for axis (xMin, xMax, yMin, yMax).")
+    
+    while len(self.axis_points) < 4:
+        cv2.waitKey(1)
+
+    cv2.destroyAllWindows()
+
+    # Imprimir los puntos seleccionados
+    print("Selected axis points:")
+    for i, point in enumerate(self.axis_points):
+        print(f"Axis Point {i + 1}: {point}")
+
+    # Calcular los valores de xMin, xMax, yMin, yMax
+    self.axis_points.sort(key=lambda p: (p[0], p[1]))  # Ordenar por x primero, luego por y
+    x_coords = [p[0] for p in self.axis_points]
+    y_coords = [p[1] for p in self.axis_points]
+    self.x_min = min(x_coords)
+    self.x_max = max(x_coords)
+    self.y_min = min(y_coords)
+    self.y_max = max(y_coords)
+
+    # print(f"Axis values: xMin = {self.x_min}, xMax = {self.x_max}, yMin = {self.y_min}, yMax = {self.y_max}")
+    print(f"Axis values: xMin = {self.axis_values['minX']}, xMax = {self.axis_values['maxX']}")
+
+  def __click_axis_points(self, event, x, y, flags, params):
+    labels = ['minX', 'maxX', 'minY', 'maxY']
+    if event == cv2.EVENT_LBUTTONDOWN and len(self.axis_points) < 4:
+        scale_x = self.warped_image.shape[1]
+        scale_y = self.warped_image.shape[0]
+        x_new = int(x * scale_x)
+        y_new = int(y * scale_y)
+        # Asignar el punto al eje correspondiente
+        current_label = labels[len(self.axis_points)]
+        self.axis_points.append((x_new, y_new))
+        cv2.circle(self.axis_image, (x, y), 10, (255, 0, 0), -1)
+        # Redibuja la imagen después de agregar cada punto
+        resized_image = cv2.resize(self.axis_image, (self.warped_image.shape[1], self.warped_image.shape[0]))
+        cv2.imshow("Select Axis Points", resized_image)
+        print(f"Point selected for {current_label}: ({x_new}, {y_new})")
+        # Solicitar al usuario que ingrese el valor real para este punto
+        root = tk.Tk()
+        root.withdraw()  # Ocultar la ventana principal de Tkinter
+        value = simpledialog.askfloat("Input", f"Enter the value for {current_label}:")
+        self.axis_values[current_label] = value
+        print(f"Value entered for {current_label}: {value}")
+
+        # Mostrar el siguiente mensaje de instrucción
+        if len(self.axis_points) < 4:
+            next_instruction = labels[len(self.axis_points)]
+            print(f"Please click on the point for {next_instruction} and enter its value.")
+
   def __crop_image(self):
     if len(self.points) == 4:
       # Ordenar los puntos en el orden: top-left, top-right, bottom-right, bottom-left
@@ -75,11 +139,7 @@ class PreprocessingService:
 
     # Aplicar la transformación de perspectiva
     self.warped_image = cv2.warpPerspective(self.image, matrix, (width, height))
-    # Mostrar la imagen recortada
-    cv2.imshow("Cropped Image", self.warped_image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
+ 
   def __order_points(self, points):
     # Ordenar los puntos: top-left, top-right, bottom-right, bottom-left
     rect = np.zeros((4, 2), dtype="float32")
@@ -106,11 +166,16 @@ class PreprocessingService:
     height_a = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
     height_b = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
     max_height = max(int(height_a), int(height_b))
-
+  
     return max_width, max_height
+  
+
+  def __gaussian_blur(self):
+     self.warped_image = cv2.GaussianBlur(self.warped_image, (5,5), 0)
 
 
-  def get_image(self): 
+  def get_image(self):
     return self.warped_image
-
-
+  
+  def get_axis_points(self):
+     return self.axis_values
