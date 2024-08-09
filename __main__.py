@@ -5,9 +5,10 @@ import os
 
 def main():
     preprocessing_service = PreprocessingService()
-    preprocessing_service.start_process('images/monitor1.jpg')
+    preprocessing_service.start_process('images/monitor.png')
     image_processed = preprocessing_service.get_image()
-    segmentation_service = SegmentationService(image_processed)
+    axis_points = preprocessing_service.get_axis_points()
+    segmentation_service = SegmentationService(image_processed, axis_points)
     segmentation_service.start_process()
 
 if __name__ == '__main__':

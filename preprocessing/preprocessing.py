@@ -19,7 +19,7 @@ class PreprocessingService:
     if self.image is not None:
         self.__clip_image()
         self.__crop_image()
-        self.__select_axis_points()
+        # self.__select_axis_points()
         # self.__gaussian_blur()
 
   def __open_image(self, image_path):
