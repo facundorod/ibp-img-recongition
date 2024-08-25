@@ -1,25 +1,53 @@
 import cv2
 import numpy as np
+from scipy import interpolate
 class SegmentationService():
-  def __init__(self, image, axis_points): 
+  def __init__(self, image, axis_points, axis_points_values): 
     self.image = image
     self.axis_points = axis_points
     self.contour_points = []
     self.original = image
+    self.contour_points = []
+    self.x_points = []
+    self.y_points = []
+    self.real_points = []
+    self.axis_points_values = axis_points_values
 
   def start_process(self):
     self.__convert_to_hsv()
     self.__thresold_segmentation()
+    self.__gaussian_filter()
     self.__convert_to_gray()
     self.__convert_to_binary()
-    self.__watershed()
-    self.__print_image()
+    self.skeletonize_image()
+    self.__print_image(image=self.image)
+
+  def skeletonize_image(self) -> None:
+    element = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+    done = False
+    size = np.size(self.image)
+    skel = np.zeros(self.image.shape, np.uint8)
+    while (not done):
+      eroded = cv2.erode(self.image, element)
+      temp = cv2.dilate(eroded, element)
+      temp = cv2.subtract(self.image, temp)
+      skel = cv2.bitwise_or(skel, temp)
+      self.image = eroded.copy()
+      zeros = size - cv2.countNonZero(self.image)
+
+      if (zeros == size):
+        done = True
+    self.image = skel
+
+  def __gaussian_filter(self):
+    self.image = cv2.GaussianBlur(self.image, (5,5), 0)
     
   def __convert_to_binary(self):
-    _, self.image = cv2.threshold(self.image, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+    _, self.image = cv2.threshold(self.image, 100, 255, 0)
 
   def __convert_to_gray(self): 
     self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+
 
   def __convert_to_hsv(self):
     self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
@@ -38,28 +66,9 @@ class SegmentationService():
     red_segmented = cv2.bitwise_and(self.image, self.image, mask=mask)
     self.image = cv2.cvtColor(red_segmented, cv2.COLOR_BGR2RGB)
 
-  def __watershed(self):
-    kernel = np.ones((3, 3), np.uint8)
-    opening = cv2.morphologyEx(self.image, cv2.MORPH_OPEN, kernel, iterations=2)
-    sure_bg = cv2.dilate(opening, kernel, iterations=2)
-    dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
-    cv2.imshow("Dist transform", dist_transform)
-    _, sure_fg = cv2.threshold(dist_transform, 0.7 * dist_transform.max(), 255, 0)
-    
-    sure_fg = np.uint8(sure_fg)
-    unknown = cv2.subtract(sure_bg,sure_fg)
 
-    # Marker labelling
-    markers = cv2.connectedComponents(sure_fg)[1]
-    markers = markers + 1
-    markers[unknown == 255] = 0
-    self.image = cv2.cvtColor(self.original, cv2.COLOR_BGR2GRAY)
-    markers = cv2.watershed(self.original, markers)
-    self.original[markers == -1] = [0, 255, 255]
-  
-
-  def __print_image(self, window_name='Image', width=1000, height=200):
-    resized_image = cv2.resize(self.image, (width, height))
+  def __print_image(self, image, window_name='Image', width=1000, height=200):
+    resized_image = cv2.resize(image, (width, height))
     cv2.imshow(window_name, resized_image)
     cv2.resizeWindow(window_name, width, height)
     cv2.waitKey(0)

@@ -19,8 +19,7 @@ class PreprocessingService:
     if self.image is not None:
         self.__clip_image()
         self.__crop_image()
-        # self.__select_axis_points()
-        # self.__gaussian_blur()
+        self.__select_axis_points()
 
   def __open_image(self, image_path):
     self.image = cv2.imread(image_path)
@@ -67,7 +66,6 @@ class PreprocessingService:
     cv2.imshow("Select Axis Points", self.axis_image)
     cv2.setMouseCallback("Select Axis Points", self.__click_axis_points)
 
-    
     print("Please click on 4 points on the image for axis (xMin, xMax, yMin, yMax).")
     
     while len(self.axis_points) < 4:
@@ -81,24 +79,22 @@ class PreprocessingService:
         print(f"Axis Point {i + 1}: {point}")
 
     # Calcular los valores de xMin, xMax, yMin, yMax
-    self.axis_points.sort(key=lambda p: (p[0], p[1]))  # Ordenar por x primero, luego por y
     x_coords = [p[0] for p in self.axis_points]
     y_coords = [p[1] for p in self.axis_points]
-    self.x_min = min(x_coords)
-    self.x_max = max(x_coords)
-    self.y_min = min(y_coords)
-    self.y_max = max(y_coords)
 
-    # print(f"Axis values: xMin = {self.x_min}, xMax = {self.x_max}, yMin = {self.y_min}, yMax = {self.y_max}")
-    print(f"Axis values: xMin = {self.axis_values['minX']}, xMax = {self.axis_values['maxX']}")
+    # Asignar los valores de minX, maxX, minY y maxY correctamente
+    self.axis_values['minX'] = min(x_coords)
+    self.axis_values['maxX'] = max(x_coords)
+    self.axis_values['minY'] = min(y_coords)
+    self.axis_values['maxY'] = max(y_coords)
+
+    print(f"Axis values: xMin = {self.axis_values['minX']}, xMax = {self.axis_values['maxX']}, yMin = {self.axis_values['minY']}, yMax = {self.axis_values['maxY']}")
 
   def __click_axis_points(self, event, x, y, flags, params):
     labels = ['minX', 'maxX', 'minY', 'maxY']
     if event == cv2.EVENT_LBUTTONDOWN and len(self.axis_points) < 4:
-        scale_x = self.warped_image.shape[1]
-        scale_y = self.warped_image.shape[0]
-        x_new = int(x * scale_x)
-        y_new = int(y * scale_y)
+        x_new = int(x)
+        y_new = int(y)
         # Asignar el punto al eje correspondiente
         current_label = labels[len(self.axis_points)]
         self.axis_points.append((x_new, y_new))
@@ -168,14 +164,19 @@ class PreprocessingService:
     max_height = max(int(height_a), int(height_b))
   
     return max_width, max_height
-  
-
-  def __gaussian_blur(self):
-     self.warped_image = cv2.GaussianBlur(self.warped_image, (5,5), 0)
-
 
   def get_image(self):
     return self.warped_image
   
-  def get_axis_points(self):
+  def get_axis_selected_points(self):
+    min_max_dict = {
+      "minX": self.axis_points[0][0],
+      "maxX": self.axis_points[-1][0],
+      "minY": self.axis_points[0][1],
+      "maxY": self.axis_points[-1][1]
+    }
+    return min_max_dict
+
+  
+  def get_axis_selected_values(self):
      return self.axis_values
