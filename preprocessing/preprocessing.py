@@ -10,9 +10,9 @@ class PreprocessingService:
     self.warped_image = None
     self.points = []
     self.axis_points = []
-    self.window_width = 1500
+    self.window_width = 1000
     self.axis_values = {'minX': None, 'maxX': None, 'minY': None, 'maxY': None}
-    self.window_height = 900
+    self.window_height = 800
 
   def start_process(self, image_path):
     self.__open_image(image_path)
@@ -78,42 +78,31 @@ class PreprocessingService:
     for i, point in enumerate(self.axis_points):
         print(f"Axis Point {i + 1}: {point}")
 
-    # Calcular los valores de xMin, xMax, yMin, yMax
-    x_coords = [p[0] for p in self.axis_points]
-    y_coords = [p[1] for p in self.axis_points]
-
-    # Asignar los valores de minX, maxX, minY y maxY correctamente
-    self.axis_values['minX'] = min(x_coords)
-    self.axis_values['maxX'] = max(x_coords)
-    self.axis_values['minY'] = min(y_coords)
-    self.axis_values['maxY'] = max(y_coords)
-
     print(f"Axis values: xMin = {self.axis_values['minX']}, xMax = {self.axis_values['maxX']}, yMin = {self.axis_values['minY']}, yMax = {self.axis_values['maxY']}")
 
   def __click_axis_points(self, event, x, y, flags, params):
     labels = ['minX', 'maxX', 'minY', 'maxY']
     if event == cv2.EVENT_LBUTTONDOWN and len(self.axis_points) < 4:
-        x_new = int(x)
-        y_new = int(y)
-        # Asignar el punto al eje correspondiente
-        current_label = labels[len(self.axis_points)]
-        self.axis_points.append((x_new, y_new))
-        cv2.circle(self.axis_image, (x, y), 10, (255, 0, 0), -1)
-        # Redibuja la imagen después de agregar cada punto
-        resized_image = cv2.resize(self.axis_image, (self.warped_image.shape[1], self.warped_image.shape[0]))
-        cv2.imshow("Select Axis Points", resized_image)
-        print(f"Point selected for {current_label}: ({x_new}, {y_new})")
-        # Solicitar al usuario que ingrese el valor real para este punto
-        root = tk.Tk()
-        root.withdraw()  # Ocultar la ventana principal de Tkinter
-        value = simpledialog.askfloat("Input", f"Enter the value for {current_label}:")
-        self.axis_values[current_label] = value
-        print(f"Value entered for {current_label}: {value}")
+      x_new = int(x)
+      y_new = int(y)
+      # Asignar el punto al eje correspondiente
+      current_label = labels[len(self.axis_points)]
+      self.axis_points.append((x_new, y_new))
+      cv2.circle(self.axis_image, (x, y), 10, (255, 0, 0), -1)
+      # Redibuja la imagen después de agregar cada punto
+      cv2.imshow("Select Axis Points", self.axis_image)
+      print(f"Point selected for {current_label}: ({x_new}, {y_new})")
+      # Solicitar al usuario que ingrese el valor real para este punto
+      root = tk.Tk()
+      root.withdraw()  # Ocultar la ventana principal de Tkinter
+      value = simpledialog.askfloat("Input", f"Enter the value for {current_label}:")
+      self.axis_values[current_label] = value
+      print(f"Value entered for {current_label}: {value}")
 
-        # Mostrar el siguiente mensaje de instrucción
-        if len(self.axis_points) < 4:
-            next_instruction = labels[len(self.axis_points)]
-            print(f"Please click on the point for {next_instruction} and enter its value.")
+      # Mostrar el siguiente mensaje de instrucción
+      if len(self.axis_points) < 4:
+          next_instruction = labels[len(self.axis_points)]
+          print(f"Please click on the point for {next_instruction} and enter its value.")
 
   def __crop_image(self):
     if len(self.points) == 4:
@@ -169,13 +158,7 @@ class PreprocessingService:
     return self.warped_image
   
   def get_axis_selected_points(self):
-    min_max_dict = {
-      "minX": self.axis_points[0][0],
-      "maxX": self.axis_points[-1][0],
-      "minY": self.axis_points[0][1],
-      "maxY": self.axis_points[-1][1]
-    }
-    return min_max_dict
+    return self.axis_points
 
   
   def get_axis_selected_values(self):

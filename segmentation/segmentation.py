@@ -1,16 +1,14 @@
 import cv2
 import numpy as np
-from scipy import interpolate
+import matplotlib.pyplot as plt
+
+
 class SegmentationService():
   def __init__(self, image, axis_points, axis_points_values): 
     self.image = image
     self.axis_points = axis_points
-    self.contour_points = []
     self.original = image
-    self.contour_points = []
-    self.x_points = []
-    self.y_points = []
-    self.real_points = []
+    self.interpolated_points = []
     self.axis_points_values = axis_points_values
 
   def start_process(self):
@@ -19,10 +17,12 @@ class SegmentationService():
     self.__gaussian_filter()
     self.__convert_to_gray()
     self.__convert_to_binary()
-    self.skeletonize_image()
-    self.__print_image(image=self.image)
+    self.__skeletonize_image()
+    self.__print_image(image=self.image, window_name="Imagen esqueletizada")
+    self.__map_to_real_values()
+    self.__graph_points()
 
-  def skeletonize_image(self) -> None:
+  def __skeletonize_image(self) -> None:
     element = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
     done = False
     size = np.size(self.image)
@@ -38,6 +38,31 @@ class SegmentationService():
       if (zeros == size):
         done = True
     self.image = skel
+
+  def __map_to_real_values(self) -> None:
+    x_min = self.axis_points[0][0]
+    x_max = self.axis_points[1][0]
+    y_min = self.axis_points[2][1]
+    y_max = self.axis_points[3][1]
+
+    real_xmin = self.axis_points_values['minX']
+    real_xmax = self.axis_points_values['maxX']
+    real_ymin = self.axis_points_values['minY']
+    real_ymax = self.axis_points_values['maxY']
+
+    skel_points = np.column_stack(np.nonzero(self.image)) 
+    x_values_skel = skel_points[:, 1]
+
+    _, unique_indices = np.unique(x_values_skel, return_index=True)
+
+    dataset = skel_points[unique_indices]
+
+    real_x_points = np.interp(dataset[:, 1], [x_min, x_max],  [real_xmin, real_xmax] )
+
+    real_y_points = np.interp(dataset[:, 0], [y_max, y_min],  [real_ymax, real_ymin])
+    
+    self.interpolated_points = np.column_stack((real_x_points, real_y_points))
+
 
   def __gaussian_filter(self):
     self.image = cv2.GaussianBlur(self.image, (5,5), 0)
@@ -76,3 +101,15 @@ class SegmentationService():
 
   def get_segmentated_image(self):
     return self.image
+  
+  def get_interpolated_points(self):
+    return self.interpolated_points
+  
+
+  def __graph_points(self) -> None:
+    plt.figure(figsize=(8, 6))
+    x = self.interpolated_points[:, 0]
+    y = self.interpolated_points[:, 1]
+    plt.plot(x, y)
+    plt.title('Curva generada a través de puntos interpolados')
+    plt.show()
