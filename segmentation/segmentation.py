@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-
+from scipy.interpolate import CubicSpline
 
 class SegmentationService():
   def __init__(self, image, axis_points, axis_points_values): 
@@ -57,14 +57,23 @@ class SegmentationService():
 
     dataset = skel_points[unique_indices]
 
-    real_x_points = np.interp(dataset[:, 1], [x_min, x_max],  [real_xmin, real_xmax] )
 
-    real_y_points = np.interp(dataset[:, 0], [y_max, y_min],  [real_ymax, real_ymin])
-    
+    discontinuity_index = self.__detect_discontinuity(dataset=dataset)
+
+    dataset = self.__fix_discontinuity(dataset=dataset, index_discontinuity = discontinuity_index)
+
+
+    spline_interp_x = CubicSpline([x_min, x_max], [real_xmin, real_xmax])
+    real_x_points = spline_interp_x(dataset[:, 1])
+
+    spline_interp_y = CubicSpline([y_max, y_min], [real_ymax, real_ymin])
+    real_y_points = spline_interp_y(dataset[:, 0])
+
+        
     self.interpolated_points = np.column_stack((real_x_points, real_y_points))
 
 
-  def __gaussian_filter(self):
+  def __gaussian_filter(self): 
     self.image = cv2.GaussianBlur(self.image, (5,5), 0)
     
   def __convert_to_binary(self):
@@ -80,7 +89,7 @@ class SegmentationService():
   def __thresold_segmentation(self):
     lower_red1 = np.array([0, 60, 100])  
     upper_red1 = np.array([10, 255, 255]) 
-    lower_red2 = np.array([160, 60, 100])  
+    lower_red2 = np.array([150, 60, 100])  
     upper_red2 = np.array([180, 255, 255]) 
     mask1 = cv2.inRange(self.image, lower_red1, upper_red1)
     mask2 = cv2.inRange(self.image, lower_red2, upper_red2)
@@ -90,6 +99,34 @@ class SegmentationService():
     # Aplicar la máscara a la imagen original
     red_segmented = cv2.bitwise_and(self.image, self.image, mask=mask)
     self.image = cv2.cvtColor(red_segmented, cv2.COLOR_BGR2RGB)
+
+
+  def __detect_discontinuity(self, dataset):
+    x_values = dataset[:, 1]
+
+# Calcular las diferencias absolutas entre puntos consecutivos en el eje X
+    x_differences = np.abs(np.diff(x_values))
+
+    # Encontrar el índice de la mayor diferencia
+    index_max_difference = np.argmax(x_differences)
+
+    if (index_max_difference):
+      return index_max_difference
+    
+    return None
+
+  def __fix_discontinuity(self, dataset, index_discontinuity):
+    point_before = dataset[index_discontinuity]
+    point_after = dataset[index_discontinuity + 1]
+    num_interpolated_points = int(point_after[1] - point_before[1] - 1)
+    x_interp = np.arange(point_before[1] + 1, point_after[1])
+    y_interp = np.round(np.linspace(point_before[0], point_after[0], num=num_interpolated_points)).astype(int)
+
+    interpolated_points = np.column_stack((y_interp, x_interp))
+
+    fixed_dataset = np.insert(dataset, index_discontinuity + 1, interpolated_points, axis=0)
+    
+    return fixed_dataset
 
 
   def __print_image(self, image, window_name='Image', width=1000, height=200):
