@@ -63,11 +63,8 @@ class SegmentationService():
     dataset = self.__fix_discontinuity(dataset=dataset, index_discontinuity = discontinuity_index)
 
 
-    spline_interp_x = CubicSpline([x_min, x_max], [real_xmin, real_xmax])
-    real_x_points = spline_interp_x(dataset[:, 1])
-
-    spline_interp_y = CubicSpline([y_max, y_min], [real_ymax, real_ymin])
-    real_y_points = spline_interp_y(dataset[:, 0])
+    real_x_points = np.interp(dataset[:, 1], [x_min, x_max], [real_xmin, real_xmax])
+    real_y_points = np.interp(dataset[:, 0], [y_max, y_min], [real_ymax, real_ymin])
 
         
     self.interpolated_points = np.column_stack((real_x_points, real_y_points))
@@ -104,10 +101,8 @@ class SegmentationService():
   def __detect_discontinuity(self, dataset):
     x_values = dataset[:, 1]
 
-# Calcular las diferencias absolutas entre puntos consecutivos en el eje X
     x_differences = np.abs(np.diff(x_values))
 
-    # Encontrar el índice de la mayor diferencia
     index_max_difference = np.argmax(x_differences)
 
     if (index_max_difference):
