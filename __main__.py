@@ -6,7 +6,7 @@ import os
 
 def main():
     preprocessing_service = PreprocessingService()
-    preprocessing_service.start_process('images/monitor2.png')
+    preprocessing_service.start_process('images/monitor5.png')
     image_processed = preprocessing_service.get_image()
     axis_points = preprocessing_service.get_axis_selected_points()
     axis_points_values = preprocessing_service.get_axis_selected_values()
