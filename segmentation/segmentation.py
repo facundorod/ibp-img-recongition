@@ -1,11 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import CubicSpline
 from skimage.morphology import skeletonize
-import pandas as pd
-from scipy.interpolate import UnivariateSpline
-import mplcursors
 class SegmentationService():
   def __init__(self, image, axis_points, axis_points_values): 
     self.image = image
@@ -21,13 +17,12 @@ class SegmentationService():
     self.__gaussian_filter()
     self.__convert_to_binary()
     self.__skeletonize_image()
-    self.__print_image(image=self.image, window_name="Imagen esqueletizada")
     self.__map_to_real_values()
-    self.__graph_points()
 
   def __skeletonize_image(self) -> None:    
     self.image = skeletonize(self.image)
     self.image = (self.image * 255).astype(np.uint8)
+    self.__print_image(image = self.image)
     
 
   def __map_to_real_values(self) -> None:
@@ -102,65 +97,6 @@ class SegmentationService():
       return index_max_difference
     
     return None
-
-  def __fix_discontinuity(self, dataset, index_discontinuity):
-
-    X = dataset[:, 1]  # Assuming X values are in the second column
-    y = dataset[:, 0]  # Assuming y values are in the first column
-    
-    # Plot the original curve
-    plt.plot(X, y, label="Original Curve", color="blue")
-    
-    # Highlight the discontinuity point
-    plt.scatter(X[index_discontinuity], y[index_discontinuity], color="red", label="Discontinuity Point", s=100)
-    plt.text(X[index_discontinuity], y[index_discontinuity], f'({X[index_discontinuity]:.2f}, {y[index_discontinuity]:.2f})', 
-             verticalalignment='bottom', horizontalalignment='right', color="red")
-    
-    # Plot settings
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.title("Curve with Discontinuity Point")
-    plt.legend()
-    plt.show()
-    # point_before = dataset[index_discontinuity]
-    # point_after = dataset[index_discontinuity + 1]
-    # num_interpolated_points = int(point_after[1] - point_before[1] - 1)
-    # x_interp = np.arange(point_before[1] + 1, point_after[1])
-    # y_interp = np.round(np.linspace(point_before[0], point_after[0], num=num_interpolated_points)).astype(int)
-
-    # interpolated_points = np.column_stack((y_interp, x_interp))
-
-    # fixed_dataset = np.insert(dataset, index_discontinuity + 1, interpolated_points, axis=0)
-    
-    # return fixed_dataset
-
-    # x_values = dataset[:, 1]  # Assuming X values are in the second column
-    # y_values = dataset[:, 0]  # Assuming Y values are in the first column
-
-    # # Select surrounding points for interpolation
-    # num_points_around = 800  # You can adjust based on the level of smoothing needed
-    # start_index = max(0, index_discontinuity - num_points_around)
-    # end_index = min(len(dataset) - 1, index_discontinuity + num_points_around + 1)
-    
-    # # Points for interpolation
-    # x_interp_points = x_values[start_index:end_index]
-    # y_interp_points = y_values[start_index:end_index]
-
-    # # Perform cubic spline interpolation
-    # cs = CubicSpline(x_interp_points, y_interp_points)
-
-    # # Generate interpolated points
-    # x_interp = np.arange(x_values[index_discontinuity] + 1, x_values[index_discontinuity + 1])
-    # y_interp = np.round(cs(x_interp)).astype(int)
-
-    # # Create array of interpolated points
-    # interpolated_points = np.column_stack((y_interp, x_interp))
-
-    # # Insert interpolated points into the dataset
-    # fixed_dataset = np.insert(dataset, index_discontinuity + 1, interpolated_points, axis=0)
-    
-    # return fixed_dataset
-
 
   def __print_image(self, image, window_name='Image', width=1000, height=200):
     resized_image = cv2.resize(image, (width, height))
